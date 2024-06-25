@@ -70,13 +70,18 @@ def all_files_in(s:str, include_hidden:bool=False) -> str:
             yield s
 
 
-def all_files_like(s:str) -> str:
+def all_files_like(d:str, partial_name:str) -> str:
     """
     A list of all files that match the argument
     """
-    s = expandall(s)
-    yield from ( f for f in all_files_in(os.path.dirname(s)) 
-        if fnmatch.fnmatch(os.path.basename(f), os.path.basename(s)) )
+    yield from ( f for f in all_files_in(d) if partial_name in f )
+
+
+def all_files_not_like(d:str, partial_name:str) -> str:
+    """
+    A list of all files that do not match the argument
+    """
+    yield from ( f for f in all_files_in(d) if partial_name not in f )
 
 
 def all_module_files() -> str:
@@ -336,6 +341,29 @@ def get_file_type(path:str) -> str:
         if shred.startswith(k): return v
 
     return "TXT" if shred.isascii() else None
+    
+
+def get_lockfile(lockfile:str) -> bool:
+    """
+    Return whether we are the process that owns the lock.
+    """
+    if not os.path.exists(lockfile):
+        with open(lockfile, 'w') as f:
+            f.write(f"{os.getpid()}")
+            f.close()
+        return True
+
+    else:
+        with open(lockfile, 'r') as f:
+            return f.read().strip() == str(os.getpid())
+
+
+def release_lockfile(lockfile:str) -> bool:
+    try:
+        os.unlink(lockfile)
+        return True
+    except:
+        return False
     
     
 def got_data(filenames:str) -> bool:
